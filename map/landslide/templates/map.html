@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
+  <link rel='stylesheet' href='https://unpkg.com/augmented-ui@1.1.2/augmented.css'>
+  <style type="text/css">
+  #map {
+   top:0;
+   right: 0;
+   position: fixed;
+   width: 100vw;
+   height: 100vh;
+ }
+
+ #info {
+   background-color: white;
+   top:0;
+   right: 0;
+   position: fixed;
+   width: 100vw;
+   height: 100vh;
+ }
+
+
+ #info {
+  background: #000;
+  font-family: Helvetica, Arial, sans-serif;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  color: cyan;
+  --bg: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 1em;
+}
+.checkbox:checked {
+  --bg: unset;
+}
+.checkbox:before, .checkbox:after {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+}
+.checkbox:before {
+  padding: 0.5em;
+  background: var(--bg, cyan);
+  border: 1px solid;
+}
+.checkbox:after {
+  content: var(--message);
+  color: #fff;
+  margin-left: 0.5em;
+}
+
+.message_container {
+  filter: drop-shadow(0 0 8px cyan);
+}
+.message_container .message {
+  background: #000;
+  --aug-border: 2px;
+  --aug-border-bg: cyan;
+  width: calc(100% - 20px);
+  max-width: 640px;
+  margin: 0 auto;
+  overflow: hidden;
+  transition: all 0.5s;
+}
+.message_container .message .title {
+  display: inline-block;
+  padding: 0.5em 2em;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  --aug-inset: .25em;
+  --aug-inset-bg: #ff0;
+  --aug-br: .75em;
+}
+.message_container .message p {
+  color: #fff;
+  padding: 1em;
+  margin: 0;
+  display: block;
+  line-height: 1.4em;
+  text-align: justify;
+  max-height: 10em;
+}
+
+.checkbox ~ .message_container > .message {
+  max-height: 0;
+  opacity: 0;
+}
+.checkbox:checked ~ .message_container > .message {
+  max-height: 600px;
+  opacity: 1;
+}
+
+.footer {
+  background: rgba(64, 64, 64, 0.1);
+  backdrop-filter: blur(8px);
+  position: fixed;
+  left: 2.5%;
+  right: 2.5%;
+  bottom: -2px;
+  --aug-border: 2px;
+  --aug-border-bg: cyan;
+  color: #fff;
+  padding: 0.5em;
+  text-align: center;
+}
+.footer ul {
+  display: block;
+}
+.footer ul li {
+  display: inline-block;
+  padding: 0.5em 1em;
+}
+.footer a {
+  color: cyan;
+  text-decoration: none;
+}
+.footer a:hover, .footer a:focus {
+  text-decoration: underline;
+}
+.popup_label {
+  margin: 20px;
+  color: white;
+}
+</style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info">
+   <input class="checkbox" id="checkbox_popup" type="checkbox" aria-label="Tick the checkbox to open/close the prompt"/>
+   <div class="message_container">
+    <div class="message" augmented-ui="exe tl-clip br-clip">
+      <div class="title" augmented-ui="exe tl-clip br-clip">Data in this point</div>
+      <br/>
+      <br/>
+      <label class="popup_label"><u>City Name</u><p id="city"></p></label>
+      <label class="popup_label"><u>Population</u><p id="human"></p></label>
+      <label class="popup_label"><u>Old landslides</u><p id="historical_data"></p></label>
+      <label class="popup_label"><u>Cracks</u><p id="cracks_data"></p></label>
+    </div>
+  </div>
+
+</div>
+
+<script type="text/javascript">
+  $("#info").hide();
+  var map = new L.Map('map').setView([30.5, 31.7], 7);
+  L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(map);
+
+  var tasmania = new L.TileLayer.WMS('https://maps.isric.org/mapserv?map%3D/map/ocd.map', {
+    layers: 'ocd_100-200cm_uncertainty',
+    format: 'image/png',
+    transparent: true,
+  }).addTo(map);
+
+  var tasmania = new L.TileLayer.WMS('https://mysterious588.tech/cgi-bin/qgis_mapserv.fcgi?map=/home/manwar/GIS/nasa.qgs', {
+    layers: 'cracks,historical,suscV1_1,IMERG',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+  }).addTo(map);
+
+  map.on('click', function(e) {
+   data = $.get("/get_data?long=" + e.latlng.lng + "&lat=" + e.latlng.lat, function(res) {
+    data = JSON.parse(res);
+    $("#city").html(data["human"][0]);
+    $("#human").html(data["human"][1]);
+    $("#historical_data").html("Number: " + data["historical"].length);
+    $("#cracks_data").html("Number: " + data["cracks"]);
+    setTimeout(function(){$("#checkbox_popup").prop("checked", true)}, 500);
+    $("#info").fadeIn(500);
+  });
+ });
+  $("#checkbox_popup").click(function(){
+    setTimeout(function(){$("#info").fadeOut(500);}, 500);
+  });
+</script>
+</body>
+</html>
